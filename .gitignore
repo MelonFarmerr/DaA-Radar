@@ -1,0 +1,25 @@
+# EXE
+dist/
+build/
+*.spec
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Data (user-specific)
+stock_history.db
+stock_index.csv
+config.json
+
+# IDE
+.vscode/
+.idea/
+
+# Old data
+announcement.txt
+
+# OS
+Thumbs.db
+*.tmp
