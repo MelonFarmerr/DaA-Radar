@@ -178,6 +178,8 @@ class App(ctk.CTk):
         self._news_text.pack(fill="x", padx=10, pady=3)
         self._news_idx = 0
         self._news_items = ["数据加载中…"]
+        self._news_text.bind("<Button-1>", lambda e: webbrowser.open(
+            "https://finance.eastmoney.com/a/czqyw.html"))
         self._update_news_ticker()
 
         self._result_area = ctk.CTkScrollableFrame(t, fg_color="transparent",
@@ -226,8 +228,6 @@ class App(ctk.CTk):
             pass
         if self._news_items and hasattr(self, '_news_var') and self._news_var.get():
             self._news_text.configure(text=self._news_items[self._news_idx])
-            self._news_text.bind("<Button-1>", lambda e: webbrowser.open(
-                "https://finance.eastmoney.com/a/czqyw.html"))
             self._news_idx = (self._news_idx + 1) % len(self._news_items)
         self._news_timer = self.after(5000, self._update_news_ticker)
 
