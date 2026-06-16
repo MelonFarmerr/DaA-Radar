@@ -9,8 +9,8 @@ from engine.strategy_mgr import STRAT_FIELDS
 import customtkinter as ctk
 from tkinter import messagebox
 
-APP_NAME = "大A雷达 v1.1"
-VERSION = "1.1"
+APP_NAME = "大A雷达 v1.2"
+VERSION = "1.2"
 WIN_W, WIN_H = 900, 700
 
 FONT_SCALES = {
