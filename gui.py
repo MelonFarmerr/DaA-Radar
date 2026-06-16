@@ -177,9 +177,9 @@ class App(ctk.CTk):
                                         text_color=C["T"], anchor="w", cursor="hand2")
         self._news_text.pack(fill="x", padx=10, pady=3)
         self._news_idx = 0
-        self._news_items = ["数据加载中…"]
+        self._news_items = [{"title": "数据加载中…", "url": "https://finance.eastmoney.com/a/czqyw.html"}]
         self._news_text.bind("<Button-1>", lambda e: webbrowser.open(
-            "https://finance.eastmoney.com/a/czqyw.html"))
+            self._news_items[self._news_idx]["url"] if self._news_items else "https://finance.eastmoney.com/a/czqyw.html"))
         self._update_news_ticker()
 
         self._result_area = ctk.CTkScrollableFrame(t, fg_color="transparent",
@@ -227,7 +227,8 @@ class App(ctk.CTk):
         except Exception:
             pass
         if self._news_items and hasattr(self, '_news_var') and self._news_var.get():
-            self._news_text.configure(text=self._news_items[self._news_idx])
+            item = self._news_items[self._news_idx]
+            self._news_text.configure(text=item["title"] if isinstance(item, dict) else item)
             self._news_idx = (self._news_idx + 1) % len(self._news_items)
         self._news_timer = self.after(5000, self._update_news_ticker)
 
@@ -1042,16 +1043,8 @@ class App(ctk.CTk):
 
     def _toggle_news(self):
         if self._news_var.get():
-            self._news_frame.pack(fill="x", padx=4, pady=(2, 2), before=self._result_area)
-            try:
-                from engine.datasource import get_news
-                n = get_news(); self._news_items = n if n else ["暂无新闻"]
-                self._news_idx = 0
-                self._news_text.configure(text=self._news_items[0])
-            except: pass
-            if hasattr(self, '_news_timer'):
-                self.after_cancel(self._news_timer)
-            self._news_timer = self.after(5000, self._update_news_ticker)
+            messagebox.showinfo("提示", "新闻滚动条将在重启程序后显示")
+            self._news_var.set(False)
         else:
             self._news_frame.pack_forget()
             if hasattr(self, '_news_timer'):

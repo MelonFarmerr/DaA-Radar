@@ -670,17 +670,17 @@ def get_news():
         req = urllib.request.Request("https://finance.eastmoney.com/a/czqyw.html", headers={"User-Agent": UA})
         raw = urllib.request.urlopen(req, timeout=10).read()
         html = raw.decode("utf-8", errors="replace")
-        titles = re.findall(
-            r'<a[^>]+href="https://finance\.eastmoney\.com/a/\d+\.html"[^>]*>([^<]{15,})</a>', html
+        pairs = re.findall(
+            r'<a[^>]+href="(https://finance\.eastmoney\.com/a/\d+\.html)"[^>]*>([^<]{15,})</a>', html
         )
         clean = []
-        for t in titles:
-            t = re.sub(r"<[^>]+>", "", t).replace("　", " ").strip()
-            if len(t) >= 15 and "免责" not in t and "广告" not in t:
-                clean.append(t)
+        for url, title in pairs:
+            title = re.sub(r"<[^>]+>", "", title).replace("　", " ").strip()
+            if len(title) >= 15 and "免责" not in title and "广告" not in title:
+                clean.append({"title": title, "url": url})
         return clean[:5]
     except Exception:
-        return ["（新闻拉取失败）"]
+        return [{"title": "（新闻拉取失败）", "url": "https://finance.eastmoney.com/a/czqyw.html"}]
 
 
 def ensure_ready():
