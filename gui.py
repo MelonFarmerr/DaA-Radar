@@ -948,43 +948,43 @@ class App(ctk.CTk):
         app = self.core.cfg.get("appearance",{})
         scale = app.get("font_scale",1); theme = app.get("theme","dark")
 
-        c1 = ctk.CTkFrame(sf, fg_color=C["B1"], corner_radius=12); c1.pack(fill="x", padx=4, pady=(6,4))
-        ctk.CTkLabel(c1, text="界面主题", font=FH, text_color=C["T"]).pack(anchor="w", padx=16, pady=(12,4))
-        theme_row = ctk.CTkFrame(c1, fg_color="transparent"); theme_row.pack(fill="x", padx=16, pady=(0,12))
+        c_app = ctk.CTkFrame(sf, fg_color=C["B1"], corner_radius=12); c_app.pack(fill="x", padx=4, pady=(6,4))
+        ctk.CTkLabel(c_app, text="外观设置", font=FH, text_color=C["T"]).pack(anchor="w", padx=16, pady=(12,6))
+
         theme_names = {"dark":"深色","light":"浅色","system":"跟随系统"}
         self._theme_var = ctk.StringVar(value=theme)
-        self._theme_menu = ctk.CTkOptionMenu(theme_row, values=list(theme_names.values()),
+        tr = ctk.CTkFrame(c_app, fg_color="transparent"); tr.pack(fill="x", padx=16, pady=3)
+        ctk.CTkLabel(tr, text="主题", font=FB, text_color=C["M"], width=50).pack(side="left")
+        self._theme_menu = ctk.CTkOptionMenu(tr, values=list(theme_names.values()),
                                               font=FB, fg_color=C["B2"], text_color=C["T"],
                                               button_color=C["A"], button_hover_color=C["AH"],
                                               dropdown_fg_color=C["B1"], dropdown_text_color=C["T"],
-                                              dropdown_font=FS, width=160, variable=self._theme_var,
+                                              dropdown_font=FS, width=130, variable=self._theme_var,
                                               command=self._on_theme_change)
-        self._theme_menu.pack(side="left")
-        self._theme_menu.set(theme_names.get(theme,"深色"))
+        self._theme_menu.pack(side="left"); self._theme_menu.set(theme_names.get(theme,"深色"))
 
-        c2 = ctk.CTkFrame(sf, fg_color=C["B1"], corner_radius=12); c2.pack(fill="x", padx=4, pady=4)
-        ctk.CTkLabel(c2, text="字号大小", font=FH, text_color=C["T"]).pack(anchor="w", padx=16, pady=(12,4))
-        font_row = ctk.CTkFrame(c2, fg_color="transparent"); font_row.pack(fill="x", padx=16, pady=(0,12))
         scale_names = {0:"小",1:"中 (默认)",2:"大"}
         self._font_var = ctk.StringVar(value=scale_names.get(scale,"中 (默认)"))
-        self._font_menu = ctk.CTkOptionMenu(font_row, values=list(scale_names.values()),
+        fr = ctk.CTkFrame(c_app, fg_color="transparent"); fr.pack(fill="x", padx=16, pady=3)
+        ctk.CTkLabel(fr, text="字号", font=FB, text_color=C["M"], width=50).pack(side="left")
+        self._font_menu = ctk.CTkOptionMenu(fr, values=list(scale_names.values()),
                                              font=FB, fg_color=C["B2"], text_color=C["T"],
                                              button_color=C["A"], button_hover_color=C["AH"],
                                              dropdown_fg_color=C["B1"], dropdown_text_color=C["T"],
-                                             dropdown_font=FS, width=160, variable=self._font_var)
+                                             dropdown_font=FS, width=130, variable=self._font_var)
         self._font_menu.pack(side="left"); self._font_menu.set(scale_names.get(scale,"中 (默认)"))
-        ctk.CTkButton(font_row, text="应用", font=FB, fg_color=C["A"], hover_color=C["AH"],
-                       corner_radius=8, height=32, width=70, command=self._apply_font).pack(side="left", padx=10)
-        ctk.CTkLabel(c2, text="修改字号后需重启程序生效", font=FS, text_color=C["M"]).pack(anchor="w", padx=16, pady=(0,12))
 
-        c_news = ctk.CTkFrame(sf, fg_color=C["B1"], corner_radius=12); c_news.pack(fill="x", padx=4, pady=4)
-        ctk.CTkLabel(c_news, text="新闻滚动", font=FH, text_color=C["T"]).pack(anchor="w", padx=16, pady=(12,4))
         cfg_news = self.core.cfg.get("appearance",{}).get("news_enabled", True)
         self._news_var = ctk.BooleanVar(value=cfg_news)
-        ctk.CTkCheckBox(c_news, text="运行时首页显示财经新闻滚动条", variable=self._news_var,
+        nr = ctk.CTkFrame(c_app, fg_color="transparent"); nr.pack(fill="x", padx=16, pady=3)
+        ctk.CTkLabel(nr, text="新闻", font=FB, text_color=C["M"], width=50).pack(side="left")
+        ctk.CTkCheckBox(nr, text="首页滚动新闻条", variable=self._news_var,
                          font=FB, text_color=C["T"], fg_color=C["A"], hover_color=C["AH"],
-                         border_width=2, border_color=C["SCROLL_BG"],
-                         command=self._toggle_news).pack(anchor="w", padx=16, pady=(0,12))
+                         border_width=2, border_color=C["SCROLL_BG"]).pack(side="left")
+
+        ctk.CTkButton(c_app, text="💾 应用外观设置", font=FH, fg_color=C["A"], hover_color=C["AH"],
+                       corner_radius=8, height=36, command=self._apply_appearance_settings).pack(anchor="w", padx=16, pady=(10,4))
+        ctk.CTkLabel(c_app, text="主题即时生效，字号和新闻需重启后生效", font=FS, text_color=C["M"]).pack(anchor="w", padx=16, pady=(0,10))
 
         c3 = ctk.CTkFrame(sf, fg_color=C["B1"], corner_radius=12); c3.pack(fill="x", padx=4, pady=4)
         ctk.CTkLabel(c3, text="帮助与反馈", font=FH, text_color=C["T"]).pack(anchor="w", padx=16, pady=(12,4))
@@ -1018,11 +1018,15 @@ class App(ctk.CTk):
         self.configure(fg_color=C["B0"])
         self._rebuild()
 
-    def _apply_font(self):
+    def _apply_appearance_settings(self):
         scale_map = {"小":0,"中 (默认)":1,"大":2}
         scale = scale_map.get(self._font_var.get(),1)
-        app = self.core.cfg.get("appearance",{}); app["font_scale"]=scale; self.core.cfg.set("appearance",app)
-        messagebox.showinfo("提示","字号已保存，重启程序后生效 ✅")
+        enable = self._news_var.get()
+        app = self.core.cfg.get("appearance",{})
+        app["font_scale"] = scale
+        app["news_enabled"] = enable
+        self.core.cfg.set("appearance",app)
+        messagebox.showinfo("已保存","主题即时生效，字号和新闻需重启后生效 ✅")
 
     def _rebuild(self):
         for tab_name in ["运  行","自选股","策  略","通  知","设  置"]:
