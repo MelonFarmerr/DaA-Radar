@@ -169,11 +169,12 @@ class App(ctk.CTk):
         self._refresh_info()
 
         # 新闻滚动条
-        self._news_frame = ctk.CTkFrame(t, fg_color=C["B1"], corner_radius=8, height=26)
+        self._news_frame = ctk.CTkFrame(t, fg_color=C["B1"], corner_radius=8, height=28)
         self._news_frame.pack(fill="x", padx=4, pady=(2, 2))
         self._news_frame.pack_propagate(False)
-        self._news_text = ctk.CTkLabel(self._news_frame, text="", font=("Microsoft YaHei UI", 10),
-                                        text_color=C["M"], anchor="w")
+        news_font = ("Microsoft YaHei UI", 11, "underline")
+        self._news_text = ctk.CTkLabel(self._news_frame, text="", font=news_font,
+                                        text_color=C["T"], anchor="w", cursor="hand2")
         self._news_text.pack(fill="x", padx=10, pady=3)
         self._news_idx = 0
         self._news_items = ["数据加载中…"]
@@ -1041,8 +1042,7 @@ class App(ctk.CTk):
 
     def _toggle_news(self):
         if self._news_var.get():
-            self._news_frame.pack(fill="x", padx=4, pady=(2, 2))
-            # 重新拉取新闻
+            self._news_frame.pack(fill="x", padx=4, pady=(2, 2), before=self._result_area)
             try:
                 from engine.datasource import get_news
                 n = get_news(); self._news_items = n if n else ["暂无新闻"]
