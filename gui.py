@@ -10,6 +10,7 @@ import customtkinter as ctk
 from tkinter import messagebox
 
 APP_NAME = "大A雷达 v1.1"
+VERSION = "1.1"
 WIN_W, WIN_H = 900, 700
 
 FONT_SCALES = {
@@ -97,6 +98,7 @@ class App(ctk.CTk):
         self.core.on_progress = lambda s, t, l: self.after(0, self._on_progress, s, t, l)
         self.core.on_status = lambda txt, clr: self.after(0, self._on_status, txt, clr)
         self.core.on_done = lambda r: self.after(0, self._on_done, r)
+        self.after(5000, lambda: self._check_update(silent=True))
 
     # ═══════════ BUILD ═══════════
     def _build(self):
@@ -897,9 +899,18 @@ class App(ctk.CTk):
         ctk.CTkButton(bug_row, text="🐛 提交 Bug 反馈", font=FH, fg_color=C["D"], hover_color="#f87171",
                        corner_radius=10, height=38, command=self._open_bug_report).pack(side="left")
 
+        c3b = ctk.CTkFrame(t, fg_color=C["B1"], corner_radius=12); c3b.pack(fill="x", padx=4, pady=4)
+        ctk.CTkLabel(c3b, text="版本更新", font=FH, text_color=C["T"]).pack(anchor="w", padx=16, pady=(12,4))
+        up_row = ctk.CTkFrame(c3b, fg_color="transparent"); up_row.pack(fill="x", padx=16, pady=(4,12))
+        self._up_btn = ctk.CTkButton(up_row, text="🔍 检查更新", font=FB, fg_color=C["A"], hover_color=C["AH"],
+                                       corner_radius=8, height=34, command=self._check_update)
+        self._up_btn.pack(side="left")
+        self._up_status = ctk.CTkLabel(up_row, text="", font=FS, text_color=C["M"])
+        self._up_status.pack(side="left", padx=12)
+
         c4 = ctk.CTkFrame(t, fg_color=C["B1"], corner_radius=12); c4.pack(fill="x", padx=4, pady=4)
         ctk.CTkLabel(c4, text="关于", font=FH, text_color=C["T"]).pack(anchor="w", padx=16, pady=(12,4))
-        ctk.CTkLabel(c4, text="大A雷达 v1.0 · 免费开源的 A 股筛选追踪工具", font=FS, text_color=C["M"]).pack(anchor="w", padx=16)
+        ctk.CTkLabel(c4, text="大A雷达 v1.1 · 免费开源的 A 股筛选追踪工具", font=FS, text_color=C["M"]).pack(anchor="w", padx=16)
         ctk.CTkLabel(c4, text="© MelonFarmerr  ·  MIT License", font=FS, text_color=C["M"]).pack(anchor="w", padx=16, pady=(0,4))
         link_row = ctk.CTkFrame(c4, fg_color="transparent"); link_row.pack(fill="x", padx=16, pady=(4,12))
         ctk.CTkLabel(link_row, text="github.com/MelonFarmerr/DaA-Radar", font=FS, text_color=C["A"]).pack(side="left")
@@ -926,8 +937,39 @@ class App(ctk.CTk):
         self._build_run(); self._build_watch(); self._build_strat(); self._build_notify(); self._build_settings()
         self._refresh_info(); self._show_welcome()
 
+    def _check_update(self, silent=False):
+        import threading, urllib.request, json
+        def _do():
+            try:
+                url = "https://api.github.com/repos/MelonFarmerr/DaA-Radar/releases/latest"
+                req = urllib.request.Request(url, headers={"User-Agent": "DaA-Radar"})
+                data = json.loads(urllib.request.urlopen(req, timeout=8).read())
+                latest = data.get("tag_name", "").lstrip("v")
+                if latest and _version_newer(latest, VERSION):
+                    self.after(0, lambda: self._up_status.configure(
+                        text=f"有新版本 v{latest}！", text_color=C["G"]))
+                    self.after(0, lambda: self._up_btn.configure(
+                        text="⬇ 前往下载", fg_color=C["G"], hover_color="#4ade80",
+                        command=lambda: webbrowser.open("https://github.com/MelonFarmerr/DaA-Radar/releases/latest")))
+                elif not silent:
+                    self.after(0, lambda: self._up_status.configure(
+                        text="已是最新版本 ✅", text_color=C["G"]))
+            except Exception:
+                if not silent:
+                    self.after(0, lambda: self._up_status.configure(
+                        text="检查失败，请稍后重试", text_color=C["M"]))
+        threading.Thread(target=_do, daemon=True).start()
+
     def _open_bug_report(self):
         webbrowser.open("https://github.com/MelonFarmerr/DaA-Radar/issues/new")
+
+def _version_newer(latest, current):
+    try:
+        l = [int(x) for x in latest.split(".")]
+        c = [int(x) for x in current.split(".")]
+        return l > c
+    except Exception:
+        return latest != current
 
 
 if __name__ == "__main__":

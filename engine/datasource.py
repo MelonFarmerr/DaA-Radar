@@ -63,7 +63,7 @@ def today_str():
 #  SQLite 缓存
 # ═══════════════════════════════════════════
 def _init_db():
-    conn = sqlite3.connect(DB_PATH)
+    conn = sqlite3.connect(DB_PATH, timeout=10)
     conn.execute("""
         CREATE TABLE IF NOT EXISTS data_cache (
             cache_key TEXT PRIMARY KEY,
@@ -96,7 +96,7 @@ def _init_db():
 def cache_put(key, data, db=None):
     own = db is None
     if own:
-        db = sqlite3.connect(DB_PATH)
+        db = sqlite3.connect(DB_PATH, timeout=10)
     db.execute("INSERT OR REPLACE INTO data_cache (cache_key, data_json, updated_at) VALUES (?,?,?)",
                (key, json.dumps(data, ensure_ascii=False), _now()))
     if own:
@@ -106,7 +106,7 @@ def cache_put(key, data, db=None):
 def cache_get(key, max_age_sec=300, db=None):
     own = db is None
     if own:
-        db = sqlite3.connect(DB_PATH)
+        db = sqlite3.connect(DB_PATH, timeout=10)
     row = db.execute("SELECT data_json, updated_at FROM data_cache WHERE cache_key=?",
                      (key,)).fetchone()
     if own:

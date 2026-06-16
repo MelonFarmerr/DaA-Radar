@@ -1,5 +1,6 @@
 import json, os
 from . import datasource
+from .scheduler import batch_run
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 STRATEGIES_DIR = os.path.join(os.path.dirname(HERE), "strategies")
@@ -235,19 +236,32 @@ def screen(stocks, strategy_name, ma_checker=None):
     need_tech_for = [c for c in candidates if c["match_type"] == "exact" and need_tech]
 
     tech_batch = need_tech_for[:100]
-    for stock in tech_batch:
-        tech_ok, tech_total, tech_reasons, tech_data = _check_technicals(filters, stock["code"], stock.get("price", 0))
-        stock["ma_status"] = tech_data["ma"]["status"]
-        stock["mas"] = tech_data["ma"].get("mas", {})
-        stock["macd"] = tech_data["macd"]
-        stock["kdj"] = tech_data["kdj"]
-        stock["consecutive"] = tech_data["consecutive"]
-        if tech_ok < tech_total:
-            if sim_enabled:
-                stock["match_type"] = "similar"
-                stock["similar_reasons"].extend(tech_reasons)
-            else:
+    if tech_batch:
+        def _check_one(stock):
+            code = stock["code"]
+            price = stock.get("price", 0)
+            return _check_technicals(filters, code, price)
+
+        results = batch_run(_check_one, tech_batch, desc="检查技术指标")
+
+        for i, stock in enumerate(tech_batch):
+            r = results.get(i)
+            if r is None:
                 stock["match_type"] = "_rejected"
+                stock["similar_reasons"].append("技术指标检查失败(网络错误)")
+                continue
+            tech_ok, tech_total, tech_reasons, tech_data = r
+            stock["ma_status"] = tech_data["ma"]["status"]
+            stock["mas"] = tech_data["ma"].get("mas", {})
+            stock["macd"] = tech_data["macd"]
+            stock["kdj"] = tech_data["kdj"]
+            stock["consecutive"] = tech_data["consecutive"]
+            if tech_ok < tech_total:
+                if sim_enabled:
+                    stock["match_type"] = "similar"
+                    stock["similar_reasons"].extend(tech_reasons)
+                else:
+                    stock["match_type"] = "_rejected"
 
     # ma_checker fallback for legacy compatibility
     if not need_tech and ma_checker and filters.get("ma_aligned"):
