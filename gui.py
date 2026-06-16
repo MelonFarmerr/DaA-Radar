@@ -161,6 +161,17 @@ class App(ctk.CTk):
         self._auto_cb.pack(side="right", padx=10)
         self._refresh_info()
 
+        # 新闻滚动条
+        self._news_frame = ctk.CTkFrame(t, fg_color=C["B1"], corner_radius=8, height=26)
+        self._news_frame.pack(fill="x", padx=4, pady=(2, 2))
+        self._news_frame.pack_propagate(False)
+        self._news_text = ctk.CTkLabel(self._news_frame, text="", font=("Microsoft YaHei UI", 10),
+                                        text_color=C["M"], anchor="w")
+        self._news_text.pack(fill="x", padx=10, pady=3)
+        self._news_idx = 0
+        self._news_items = ["数据加载中…"]
+        self._update_news_ticker()
+
         self._result_area = ctk.CTkScrollableFrame(t, fg_color="transparent",
                                                     scrollbar_button_color=C["SCROLL_BG"],
                                                     scrollbar_button_hover_color=C["SCROLL_HOVER"])
@@ -192,6 +203,19 @@ class App(ctk.CTk):
         else:
             self.core.stop_auto_refresh()
             self._lbl_last.configure(text="自动刷新已停止")
+
+    def _update_news_ticker(self):
+        try:
+            news = __import__('engine.datasource', fromlist=['datasource']).get_news()
+            if news and news != self._news_items:
+                self._news_items = news
+                self._news_idx = 0
+        except Exception:
+            pass
+        if self._news_items:
+            self._news_text.configure(text=self._news_items[self._news_idx])
+            self._news_idx = (self._news_idx + 1) % len(self._news_items)
+        self.after(5000, self._update_news_ticker)
 
     def _do_run(self):
         self._log.delete("1.0", "end")
@@ -232,6 +256,22 @@ class App(ctk.CTk):
 
         self._result_area.pack(fill="both", expand=True, padx=4, pady=(2, 6))
         c1, c2 = C["G"], C["Y"]
+
+        # 每日简报
+        if not results.get("_auto") and results.get("watch_stocks"):
+            try:
+                from engine.brief import build, build_title
+                title = build_title(results.get("indices", {}))
+                body = build(results.get("indices", {}), results.get("watch_stocks", []),
+                            results.get("exact", []), results.get("similar", []),
+                            results.get("strategy_name", ""))
+                brief_card = ctk.CTkFrame(self._result_area, fg_color="#1a2740", corner_radius=10)
+                brief_card.pack(fill="x", padx=4, pady=(0, 8))
+                ctk.CTkLabel(brief_card, text=f"📰 {title}", font=FH, text_color=A).pack(anchor="w", padx=14, pady=(10, 2))
+                ctk.CTkLabel(brief_card, text=body, font=FB, text_color=T, wraplength=800,
+                             justify="left").pack(anchor="w", padx=14, pady=(2, 10))
+            except Exception:
+                pass
 
         if results.get("idx_fresh") is False or results.get("scan_fresh") is False:
             ctk.CTkLabel(self._result_area, text="⚠️ 数据来自缓存，可能不是最新",
@@ -908,6 +948,14 @@ class App(ctk.CTk):
                        corner_radius=8, height=32, width=70, command=self._apply_font).pack(side="left", padx=10)
         ctk.CTkLabel(c2, text="修改字号后需重启程序生效", font=FS, text_color=C["M"]).pack(anchor="w", padx=16, pady=(0,12))
 
+        c_news = ctk.CTkFrame(t, fg_color=C["B1"], corner_radius=12); c_news.pack(fill="x", padx=4, pady=4)
+        ctk.CTkLabel(c_news, text="新闻滚动", font=FH, text_color=C["T"]).pack(anchor="w", padx=16, pady=(12,4))
+        self._news_var = ctk.BooleanVar(value=True)
+        ctk.CTkCheckBox(c_news, text="运行时首页显示财经新闻滚动条", variable=self._news_var,
+                         font=FB, text_color=C["T"], fg_color=C["A"], hover_color=C["AH"],
+                         border_width=2, border_color=C["SCROLL_BG"],
+                         command=self._toggle_news).pack(anchor="w", padx=16, pady=(0,12))
+
         c3 = ctk.CTkFrame(t, fg_color=C["B1"], corner_radius=12); c3.pack(fill="x", padx=4, pady=4)
         ctk.CTkLabel(c3, text="帮助与反馈", font=FH, text_color=C["T"]).pack(anchor="w", padx=16, pady=(12,4))
         ctk.CTkLabel(c3, text="遇到 Bug 或有功能建议？在 GitHub 提交 Issue", font=FS, text_color=C["M"]).pack(anchor="w", padx=16)
@@ -975,6 +1023,12 @@ class App(ctk.CTk):
                     self.after(0, lambda: self._up_status.configure(
                         text="检查失败，请稍后重试", text_color=C["M"]))
         threading.Thread(target=_do, daemon=True).start()
+
+    def _toggle_news(self):
+        if self._news_var.get():
+            self._news_frame.pack(fill="x", padx=4, pady=(2, 2))
+        else:
+            self._news_frame.pack_forget()
 
     def _open_bug_report(self):
         webbrowser.open("https://github.com/MelonFarmerr/DaA-Radar/issues/new")
