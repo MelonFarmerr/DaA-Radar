@@ -1,4 +1,4 @@
-import os, threading
+import os, threading, time
 from .config_mgr import ConfigManager
 from .watchlist_mgr import WatchlistManager
 from .strategy_mgr import StrategyManager, PRESETS
@@ -188,3 +188,32 @@ class Core:
     # ── 刷新股票列表 ──
     def refresh_stock_index(self):
         return datasource.refresh_index()
+
+    # ── 自动刷新 ──
+    def start_auto_refresh(self, interval_sec=30):
+        if hasattr(self, '_refresh_timer') and self._refresh_timer:
+            return
+        self._refresh_running = True
+        self._refresh_timer = threading.Thread(target=self._auto_refresh_loop,
+                                               args=(interval_sec,), daemon=True)
+        self._refresh_timer.start()
+
+    def stop_auto_refresh(self):
+        self._refresh_running = False
+        self._refresh_timer = None
+
+    def _auto_refresh_loop(self, interval_sec):
+        while getattr(self, '_refresh_running', False):
+            try:
+                indices, idx_fresh = datasource.get_indices()
+                watch_data = self.watchlist.get_all_data(cache_ttl=5)
+                if self.on_done:
+                    self.on_done({
+                        "date": datasource.today_str(), "indices": indices,
+                        "idx_fresh": idx_fresh, "watch_stocks": watch_data,
+                        "exact": [], "similar": [], "strategy_name": "", "scan_fresh": True,
+                        "news": [], "_auto": True,
+                    })
+            except Exception:
+                pass
+            time.sleep(interval_sec)

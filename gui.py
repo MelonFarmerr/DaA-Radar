@@ -153,6 +153,12 @@ class App(ctk.CTk):
         self._prog_lbl.pack(side="left")
         self._lbl_last = ctk.CTkLabel(bar, text="", font=FS, text_color=C["M"])
         self._lbl_last.pack(side="right")
+        self._auto_var = ctk.BooleanVar(value=False)
+        self._auto_cb = ctk.CTkCheckBox(bar, text="自动刷新(30s)", variable=self._auto_var,
+                                         font=FS, text_color=C["T"], fg_color=C["A"], hover_color=C["AH"],
+                                         border_width=2, border_color=C["SCROLL_BG"],
+                                         command=self._toggle_auto_refresh)
+        self._auto_cb.pack(side="right", padx=10)
         self._refresh_info()
 
         self._result_area = ctk.CTkScrollableFrame(t, fg_color="transparent",
@@ -179,6 +185,14 @@ class App(ctk.CTk):
         if self.core.last_run_time:
             self._lbl_last.configure(text=f"上次: {self.core.last_run_time}")
 
+    def _toggle_auto_refresh(self):
+        if self._auto_var.get():
+            self.core.start_auto_refresh(interval_sec=30)
+            self._lbl_last.configure(text="自动刷新中…", text_color=C["G"])
+        else:
+            self.core.stop_auto_refresh()
+            self._lbl_last.configure(text="自动刷新已停止")
+
     def _do_run(self):
         self._log.delete("1.0", "end")
         self._prog_bar.set(0)
@@ -199,13 +213,15 @@ class App(ctk.CTk):
         self._st.configure(text=text, text_color=color)
 
     def _on_done(self, results):
-        self._prog_bar.set(1)
-        self._prog_lbl.configure(text="✅ 完成")
-        self._st.configure(text="● 就绪", text_color=C["M"])
-        self._br.configure(text="▶  开  始", state="normal")
+        if not results.get("_auto"):
+            self._prog_bar.set(1)
+            self._prog_lbl.configure(text="✅ 完成")
+            self._st.configure(text="● 就绪", text_color=C["M"])
+            self._br.configure(text="▶  开  始", state="normal")
         self._refresh_info()
         self._last_results = results
-        self._show_results(results)
+        if results.get("watch_stocks"):
+            self._show_results(results)
 
     def _show_results(self, results):
         self._result_area.pack_forget()
