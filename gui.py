@@ -177,9 +177,13 @@ class App(ctk.CTk):
                                         text_color=C["T"], anchor="w", cursor="hand2")
         self._news_text.pack(fill="x", padx=10, pady=3)
         self._news_idx = 0
+        self._news_urls = {}
         self._news_items = [{"title": "数据加载中…", "url": "https://finance.eastmoney.com/a/czqyw.html"}]
         self._news_text.bind("<Button-1>", lambda e: webbrowser.open(
-            self._news_items[self._news_idx]["url"] if self._news_items else "https://finance.eastmoney.com/a/czqyw.html"))
+            self._news_urls.get(self._news_text.cget("text"), "https://finance.eastmoney.com/a/czqyw.html")))
+        if not self.core.cfg.get("appearance", {}).get("news_enabled", True):
+            self._news_var.set(False)
+            self._news_frame.pack_forget()
         self._update_news_ticker()
 
         self._result_area = ctk.CTkScrollableFrame(t, fg_color="transparent",
@@ -224,11 +228,15 @@ class App(ctk.CTk):
             if news and news != self._news_items:
                 self._news_items = news
                 self._news_idx = 0
+                for item in news:
+                    if isinstance(item, dict):
+                        self._news_urls[item["title"]] = item["url"]
         except Exception:
             pass
         if self._news_items and hasattr(self, '_news_var') and self._news_var.get():
             item = self._news_items[self._news_idx]
-            self._news_text.configure(text=item["title"] if isinstance(item, dict) else item)
+            text = item["title"] if isinstance(item, dict) else item
+            self._news_text.configure(text=text)
             self._news_idx = (self._news_idx + 1) % len(self._news_items)
         self._news_timer = self.after(5000, self._update_news_ticker)
 
@@ -933,10 +941,14 @@ class App(ctk.CTk):
     # ═══════════ 设置 ═══════════
     def _build_settings(self):
         t = self._tabs.tab("设  置")
+        sf = ctk.CTkScrollableFrame(t, fg_color="transparent",
+                                     scrollbar_button_color=C["SCROLL_BG"],
+                                     scrollbar_button_hover_color=C["SCROLL_HOVER"])
+        sf.pack(fill="both", expand=True, padx=4, pady=4)
         app = self.core.cfg.get("appearance",{})
         scale = app.get("font_scale",1); theme = app.get("theme","dark")
 
-        c1 = ctk.CTkFrame(t, fg_color=C["B1"], corner_radius=12); c1.pack(fill="x", padx=4, pady=(6,4))
+        c1 = ctk.CTkFrame(sf, fg_color=C["B1"], corner_radius=12); c1.pack(fill="x", padx=4, pady=(6,4))
         ctk.CTkLabel(c1, text="界面主题", font=FH, text_color=C["T"]).pack(anchor="w", padx=16, pady=(12,4))
         theme_row = ctk.CTkFrame(c1, fg_color="transparent"); theme_row.pack(fill="x", padx=16, pady=(0,12))
         theme_names = {"dark":"深色","light":"浅色","system":"跟随系统"}
@@ -950,7 +962,7 @@ class App(ctk.CTk):
         self._theme_menu.pack(side="left")
         self._theme_menu.set(theme_names.get(theme,"深色"))
 
-        c2 = ctk.CTkFrame(t, fg_color=C["B1"], corner_radius=12); c2.pack(fill="x", padx=4, pady=4)
+        c2 = ctk.CTkFrame(sf, fg_color=C["B1"], corner_radius=12); c2.pack(fill="x", padx=4, pady=4)
         ctk.CTkLabel(c2, text="字号大小", font=FH, text_color=C["T"]).pack(anchor="w", padx=16, pady=(12,4))
         font_row = ctk.CTkFrame(c2, fg_color="transparent"); font_row.pack(fill="x", padx=16, pady=(0,12))
         scale_names = {0:"小",1:"中 (默认)",2:"大"}
@@ -965,22 +977,23 @@ class App(ctk.CTk):
                        corner_radius=8, height=32, width=70, command=self._apply_font).pack(side="left", padx=10)
         ctk.CTkLabel(c2, text="修改字号后需重启程序生效", font=FS, text_color=C["M"]).pack(anchor="w", padx=16, pady=(0,12))
 
-        c_news = ctk.CTkFrame(t, fg_color=C["B1"], corner_radius=12); c_news.pack(fill="x", padx=4, pady=4)
+        c_news = ctk.CTkFrame(sf, fg_color=C["B1"], corner_radius=12); c_news.pack(fill="x", padx=4, pady=4)
         ctk.CTkLabel(c_news, text="新闻滚动", font=FH, text_color=C["T"]).pack(anchor="w", padx=16, pady=(12,4))
-        self._news_var = ctk.BooleanVar(value=True)
+        cfg_news = self.core.cfg.get("appearance",{}).get("news_enabled", True)
+        self._news_var = ctk.BooleanVar(value=cfg_news)
         ctk.CTkCheckBox(c_news, text="运行时首页显示财经新闻滚动条", variable=self._news_var,
                          font=FB, text_color=C["T"], fg_color=C["A"], hover_color=C["AH"],
                          border_width=2, border_color=C["SCROLL_BG"],
                          command=self._toggle_news).pack(anchor="w", padx=16, pady=(0,12))
 
-        c3 = ctk.CTkFrame(t, fg_color=C["B1"], corner_radius=12); c3.pack(fill="x", padx=4, pady=4)
+        c3 = ctk.CTkFrame(sf, fg_color=C["B1"], corner_radius=12); c3.pack(fill="x", padx=4, pady=4)
         ctk.CTkLabel(c3, text="帮助与反馈", font=FH, text_color=C["T"]).pack(anchor="w", padx=16, pady=(12,4))
         ctk.CTkLabel(c3, text="遇到 Bug 或有功能建议？在 GitHub 提交 Issue", font=FS, text_color=C["M"]).pack(anchor="w", padx=16)
         bug_row = ctk.CTkFrame(c3, fg_color="transparent"); bug_row.pack(fill="x", padx=16, pady=(8,12))
         ctk.CTkButton(bug_row, text="🐛 提交 Bug 反馈", font=FH, fg_color=C["D"], hover_color="#f87171",
                        corner_radius=10, height=38, command=self._open_bug_report).pack(side="left")
 
-        c3b = ctk.CTkFrame(t, fg_color=C["B1"], corner_radius=12); c3b.pack(fill="x", padx=4, pady=4)
+        c3b = ctk.CTkFrame(sf, fg_color=C["B1"], corner_radius=12); c3b.pack(fill="x", padx=4, pady=4)
         ctk.CTkLabel(c3b, text="版本更新", font=FH, text_color=C["T"]).pack(anchor="w", padx=16, pady=(12,4))
         up_row = ctk.CTkFrame(c3b, fg_color="transparent"); up_row.pack(fill="x", padx=16, pady=(4,12))
         self._up_btn = ctk.CTkButton(up_row, text="🔍 检查更新", font=FB, fg_color=C["A"], hover_color=C["AH"],
@@ -989,7 +1002,7 @@ class App(ctk.CTk):
         self._up_status = ctk.CTkLabel(up_row, text="", font=FS, text_color=C["M"])
         self._up_status.pack(side="left", padx=12)
 
-        c4 = ctk.CTkFrame(t, fg_color=C["B1"], corner_radius=12); c4.pack(fill="x", padx=4, pady=4)
+        c4 = ctk.CTkFrame(sf, fg_color=C["B1"], corner_radius=12); c4.pack(fill="x", padx=4, pady=4)
         ctk.CTkLabel(c4, text="关于", font=FH, text_color=C["T"]).pack(anchor="w", padx=16, pady=(12,4))
         ctk.CTkLabel(c4, text="大A雷达 v1.1 · 免费开源的 A 股筛选追踪工具", font=FS, text_color=C["M"]).pack(anchor="w", padx=16)
         ctk.CTkLabel(c4, text="© MelonFarmerr  ·  MIT License", font=FS, text_color=C["M"]).pack(anchor="w", padx=16, pady=(0,4))
@@ -1042,9 +1055,15 @@ class App(ctk.CTk):
         threading.Thread(target=_do, daemon=True).start()
 
     def _toggle_news(self):
-        if self._news_var.get():
-            messagebox.showinfo("提示", "新闻滚动条将在重启程序后显示")
-            self._news_var.set(False)
+        app = self.core.cfg.get("appearance", {})
+        enable = self._news_var.get()
+        app["news_enabled"] = enable
+        self.core.cfg.set("appearance", app)
+        if enable:
+            self._news_frame.pack(fill="x", padx=4, pady=(2, 2), before=self._result_area)
+            if hasattr(self, '_news_timer'):
+                self.after_cancel(self._news_timer)
+            self._news_timer = self.after(5000, self._update_news_ticker)
         else:
             self._news_frame.pack_forget()
             if hasattr(self, '_news_timer'):
