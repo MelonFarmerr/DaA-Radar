@@ -285,12 +285,12 @@ def _get_indices_sina():
 # ═══════════════════════════════════════════
 #  单只股票行情
 # ═══════════════════════════════════════════
-def get_stock(code):
+def get_stock(code, cache_ttl=600):
     result, fresh = _get_stock_eastmoney(code)
     if not result:
         result, fresh = _get_stock_sina(code)
     if not result:
-        result, fresh = cache_get(f"stock_{code}", max_age_sec=600)
+        result, fresh = cache_get(f"stock_{code}", max_age_sec=cache_ttl)
     return result, fresh
 
 
@@ -412,40 +412,45 @@ def _scan_eastmoney():
         return [], False
 
 
+def _fetch_sina_page(page):
+    url = (f"http://vip.stock.finance.sina.com.cn/quotes_service/api/json_v2.php/"
+           f"Market_Center.getHQNodeData?page={page}&num=500&sort=symbol&asc=1"
+           f"&node=hs_a&symbol=&_s_r_a=auto")
+    req = urllib.request.Request(url, headers={"User-Agent": UA, "Referer": "https://finance.sina.com.cn/"})
+    raw = urllib.request.urlopen(req, timeout=10).read().decode("gbk", errors="replace")
+    data = json.loads(raw)
+    results = []
+    for d in data:
+        code = d.get("symbol", "")
+        if code:
+            price = float(d.get("trade", 0) or 0)
+            prev = float(d.get("settlement", 0) or 0)
+            results.append({
+                "code": code, "name": d.get("name", ""),
+                "price": price, "change_pct": float(d.get("changepercent", 0) or 0),
+                "turnover_rate": float(d.get("turnoverratio", 0) or 0),
+                "volume_ratio": float(d.get("amount", 0) or 0) / 1e8,
+                "market_cap": 0, "main_inflow": 0,
+                "high": float(d.get("high", 0) or 0), "low": float(d.get("low", 0) or 0),
+                "pe": float(d.get("per", 0) or 0), "pb": float(d.get("pb", 0) or 0),
+                "roe": 0, "turnover_amt": float(d.get("amount", 0) or 0) / 1e8, "amplitude": 0,
+            })
+    return results
+
+
 def _scan_sina():
     try:
+        from concurrent.futures import ThreadPoolExecutor, as_completed
         all_stocks = {}
-        for page in range(1, 15):
-            url = (f"http://vip.stock.finance.sina.com.cn/quotes_service/api/json_v2.php/"
-                   f"Market_Center.getHQNodeData?page={page}&num=500&sort=symbol&asc=1"
-                   f"&node=hs_a&symbol=&_s_r_a=auto")
-            req = urllib.request.Request(url, headers={"User-Agent": UA, "Referer": "https://finance.sina.com.cn/"})
-            raw = urllib.request.urlopen(req, timeout=10).read().decode("gbk", errors="replace")
-            data = json.loads(raw)
-            if not data:
-                break
-            for d in data:
-                code = d.get("symbol", "")
-                if code and code not in all_stocks:
-                    price = float(d.get("trade", 0) or 0)
-                    prev = float(d.get("settlement", 0) or 0)
-                    all_stocks[code] = {
-                        "code": code,
-                        "name": d.get("name", ""),
-                        "price": price,
-                        "change_pct": float(d.get("changepercent", 0) or 0),
-                        "turnover_rate": float(d.get("turnoverratio", 0) or 0),
-                        "volume_ratio": float(d.get("amount", 0) or 0) / 1e8,
-                        "market_cap": 0,
-                        "main_inflow": 0,
-                        "high": float(d.get("high", 0) or 0),
-                        "low": float(d.get("low", 0) or 0),
-                        "pe": float(d.get("per", 0) or 0),
-                        "pb": float(d.get("pb", 0) or 0),
-                        "roe": 0,
-                        "turnover_amt": float(d.get("amount", 0) or 0) / 1e8,
-                        "amplitude": 0,
-                    }
+        with ThreadPoolExecutor(max_workers=6) as pool:
+            futures = {pool.submit(_fetch_sina_page, p): p for p in range(1, 15)}
+            for future in as_completed(futures):
+                try:
+                    for d in future.result(timeout=15):
+                        if d["code"] not in all_stocks:
+                            all_stocks[d["code"]] = d
+                except Exception:
+                    pass
         stocks = list(all_stocks.values())
         if stocks:
             cache_put("scan_market", stocks)
