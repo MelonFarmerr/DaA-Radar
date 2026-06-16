@@ -9,8 +9,8 @@ from engine.strategy_mgr import STRAT_FIELDS
 import customtkinter as ctk
 from tkinter import messagebox
 
-APP_NAME = "大A雷达 v1.2"
-VERSION = "1.2"
+APP_NAME = "大A雷达 v1.3"
+VERSION = "1.3"
 WIN_W, WIN_H = 900, 700
 
 FONT_SCALES = {
@@ -266,11 +266,12 @@ class App(ctk.CTk):
                 body = build(results.get("indices", {}), results.get("watch_stocks", []),
                             results.get("exact", []), results.get("similar", []),
                             results.get("strategy_name", ""))
-                brief_card = ctk.CTkFrame(self._result_area, fg_color="#1a2740", corner_radius=10)
+                brief_card = ctk.CTkFrame(self._result_area, fg_color=C["B1"], corner_radius=10)
                 brief_card.pack(fill="x", padx=4, pady=(0, 8))
-                ctk.CTkLabel(brief_card, text=f"📰 {title}", font=FH, text_color=A).pack(anchor="w", padx=14, pady=(10, 2))
-                ctk.CTkLabel(brief_card, text=body, font=FB, text_color=T, wraplength=800,
-                             justify="left").pack(anchor="w", padx=14, pady=(2, 10))
+                ctk.CTkLabel(brief_card, text=f"📰 {title}", font=FH, text_color=C["A"]).pack(anchor="w", padx=14, pady=(10, 2))
+                if body and len(body.strip()) > 5:
+                    ctk.CTkLabel(brief_card, text=body, font=FB, text_color=C["T"], wraplength=800,
+                                 justify="left").pack(anchor="w", padx=14, pady=(2, 10))
             except Exception:
                 pass
 
