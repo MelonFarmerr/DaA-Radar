@@ -206,7 +206,8 @@ class App(ctk.CTk):
 
     def _update_news_ticker(self):
         try:
-            news = __import__('engine.datasource', fromlist=['datasource']).get_news()
+            from engine.datasource import get_news
+            news = get_news()
             if news and news != self._news_items:
                 self._news_items = news
                 self._news_idx = 0
