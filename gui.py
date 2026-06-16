@@ -99,6 +99,13 @@ class App(ctk.CTk):
         self.core.on_status = lambda txt, clr: self.after(0, self._on_status, txt, clr)
         self.core.on_done = lambda r: self.after(0, self._on_done, r)
         self.after(5000, lambda: self._check_update(silent=True))
+        self.bind("<Configure>", self._on_resize)
+
+    def _on_resize(self, event):
+        self._resizing = True
+        if hasattr(self, '_resize_timer'):
+            self.after_cancel(self._resize_timer)
+        self._resize_timer = self.after(500, lambda: setattr(self, '_resizing', False))
 
     # ═══════════ BUILD ═══════════
     def _build(self):
@@ -205,6 +212,9 @@ class App(ctk.CTk):
             self._lbl_last.configure(text="自动刷新已停止")
 
     def _update_news_ticker(self):
+        if hasattr(self, '_resizing') and self._resizing:
+            self._news_timer = self.after(800, self._update_news_ticker)
+            return
         try:
             from engine.datasource import get_news
             news = get_news()
@@ -213,10 +223,12 @@ class App(ctk.CTk):
                 self._news_idx = 0
         except Exception:
             pass
-        if self._news_items:
+        if self._news_items and hasattr(self, '_news_var') and self._news_var.get():
             self._news_text.configure(text=self._news_items[self._news_idx])
+            self._news_text.bind("<Button-1>", lambda e: webbrowser.open(
+                "https://finance.eastmoney.com/a/czqyw.html"))
             self._news_idx = (self._news_idx + 1) % len(self._news_items)
-        self.after(5000, self._update_news_ticker)
+        self._news_timer = self.after(5000, self._update_news_ticker)
 
     def _do_run(self):
         self._log.delete("1.0", "end")
@@ -270,7 +282,8 @@ class App(ctk.CTk):
                 brief_card.pack(fill="x", padx=4, pady=(0, 8))
                 ctk.CTkLabel(brief_card, text=f"📰 {title}", font=FH, text_color=C["A"]).pack(anchor="w", padx=14, pady=(10, 2))
                 if body and len(body.strip()) > 5:
-                    ctk.CTkLabel(brief_card, text=body, font=FB, text_color=C["T"], wraplength=800,
+                    wrap_w = self.winfo_width() - 80
+                    ctk.CTkLabel(brief_card, text=body, font=FB, text_color=C["T"], wraplength=wrap_w,
                                  justify="left").pack(anchor="w", padx=14, pady=(2, 10))
             except Exception:
                 pass
@@ -1029,8 +1042,20 @@ class App(ctk.CTk):
     def _toggle_news(self):
         if self._news_var.get():
             self._news_frame.pack(fill="x", padx=4, pady=(2, 2))
+            # 重新拉取新闻
+            try:
+                from engine.datasource import get_news
+                n = get_news(); self._news_items = n if n else ["暂无新闻"]
+                self._news_idx = 0
+                self._news_text.configure(text=self._news_items[0])
+            except: pass
+            if hasattr(self, '_news_timer'):
+                self.after_cancel(self._news_timer)
+            self._news_timer = self.after(5000, self._update_news_ticker)
         else:
             self._news_frame.pack_forget()
+            if hasattr(self, '_news_timer'):
+                self.after_cancel(self._news_timer)
 
     def _open_bug_report(self):
         webbrowser.open("https://github.com/MelonFarmerr/DaA-Radar/issues/new")
