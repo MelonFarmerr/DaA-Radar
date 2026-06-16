@@ -408,6 +408,8 @@ class App(ctk.CTk):
                                 fg_color=C["DROP_BG"])
             lbl.pack(fill="x")
             lbl.bind("<Button-1>", lambda e, idx=i: self._pick_search(idx))
+            lbl.bind("<Enter>", lambda e, idx=i: self._hover_search(idx))
+            lbl.bind("<Leave>", lambda e: self._unhover_search())
         self._highlight_search()
 
     def _on_search_enter(self, event):
@@ -423,6 +425,13 @@ class App(ctk.CTk):
     def _highlight_search(self):
         for i,w in enumerate(self._drop.winfo_children()):
             w.configure(fg_color=C["HIGHLIGHT"] if i==self._search_idx else C["DROP_BG"])
+
+    def _hover_search(self, idx):
+        for i,w in enumerate(self._drop.winfo_children()):
+            w.configure(fg_color=C["HIGHLIGHT"] if i==idx else C["DROP_BG"])
+
+    def _unhover_search(self):
+        self._highlight_search()
 
     def _pick_search(self, idx):
         s = self._search_results[idx]; self._we.delete(0,"end"); self._we.insert(0,s["code"])
@@ -457,9 +466,11 @@ class App(ctk.CTk):
                 pl=(price-cost)/cost*100
                 ctk.CTkLabel(right,text=f"成本¥{cost:.2f}  盈亏{pl:+.1f}%",font=FB,
                              text_color=C["G"] if pl>=0 else C["D"]).pack(side="right")
-            ctk.CTkButton(inn,text="✕",font=FS,fg_color="transparent",hover_color=C["D"],
-                          corner_radius=4,height=24,width=24,
-                          command=lambda c=cd: self._do_del(c)).pack(side="right",padx=(4,0))
+            ctk.CTkButton(inn,text="✕",font=("Microsoft YaHei UI",13,"bold"),
+                          fg_color=C["D"],hover_color="#f87171",text_color="#fff",
+                          border_width=2,border_color="#f87171",
+                          corner_radius=6,height=28,width=28,
+                          command=lambda c=cd: self._do_del(c)).pack(side="right",padx=(0,0))
             for wg in (frm,inn,left,sub)+tuple(sub.winfo_children())+tuple(left.winfo_children()):
                 if not isinstance(wg,ctk.CTkButton):
                     wg.bind("<Button-1>",lambda e,c=cd:self._pick_stock(c))
@@ -959,8 +970,7 @@ class App(ctk.CTk):
                                               font=FB, fg_color=C["B2"], text_color=C["T"],
                                               button_color=C["A"], button_hover_color=C["AH"],
                                               dropdown_fg_color=C["B1"], dropdown_text_color=C["T"],
-                                              dropdown_font=FS, width=130, variable=self._theme_var,
-                                              command=self._on_theme_change)
+                                              dropdown_font=FS, width=130, variable=self._theme_var)
         self._theme_menu.pack(side="left"); self._theme_menu.set(theme_names.get(theme,"深色"))
 
         scale_names = {0:"小",1:"中 (默认)",2:"大"}
@@ -984,7 +994,7 @@ class App(ctk.CTk):
 
         ctk.CTkButton(c_app, text="💾 应用外观设置", font=FH, fg_color=C["A"], hover_color=C["AH"],
                        corner_radius=8, height=36, command=self._apply_appearance_settings).pack(anchor="w", padx=16, pady=(10,4))
-        ctk.CTkLabel(c_app, text="主题即时生效，字号和新闻需重启后生效", font=FS, text_color=C["M"]).pack(anchor="w", padx=16, pady=(0,10))
+        ctk.CTkLabel(c_app, text="所有外观设置需重启程序后生效", font=FS, text_color=C["M"]).pack(anchor="w", padx=16, pady=(0,10))
 
         c3 = ctk.CTkFrame(sf, fg_color=C["B1"], corner_radius=12); c3.pack(fill="x", padx=4, pady=4)
         ctk.CTkLabel(c3, text="帮助与反馈", font=FH, text_color=C["T"]).pack(anchor="w", padx=16, pady=(12,4))
@@ -1004,7 +1014,7 @@ class App(ctk.CTk):
 
         c4 = ctk.CTkFrame(sf, fg_color=C["B1"], corner_radius=12); c4.pack(fill="x", padx=4, pady=4)
         ctk.CTkLabel(c4, text="关于", font=FH, text_color=C["T"]).pack(anchor="w", padx=16, pady=(12,4))
-        ctk.CTkLabel(c4, text="大A雷达 v1.1 · 免费开源的 A 股筛选追踪工具", font=FS, text_color=C["M"]).pack(anchor="w", padx=16)
+        ctk.CTkLabel(c4, text="大A雷达 v1.3 · 免费开源的 A 股筛选追踪工具", font=FS, text_color=C["M"]).pack(anchor="w", padx=16)
         ctk.CTkLabel(c4, text="© MelonFarmerr  ·  MIT License", font=FS, text_color=C["M"]).pack(anchor="w", padx=16, pady=(0,4))
         link_row = ctk.CTkFrame(c4, fg_color="transparent"); link_row.pack(fill="x", padx=16, pady=(4,12))
         ctk.CTkLabel(link_row, text="github.com/MelonFarmerr/DaA-Radar", font=FS, text_color=C["A"]).pack(side="left")
@@ -1020,13 +1030,16 @@ class App(ctk.CTk):
 
     def _apply_appearance_settings(self):
         scale_map = {"小":0,"中 (默认)":1,"大":2}
+        theme_map = {"深色":"dark","浅色":"light","跟随系统":"system"}
         scale = scale_map.get(self._font_var.get(),1)
+        theme = theme_map.get(self._theme_var.get(),"dark")
         enable = self._news_var.get()
         app = self.core.cfg.get("appearance",{})
+        app["theme"] = theme
         app["font_scale"] = scale
         app["news_enabled"] = enable
         self.core.cfg.set("appearance",app)
-        messagebox.showinfo("已保存","主题即时生效，字号和新闻需重启后生效 ✅")
+        messagebox.showinfo("已保存","所有外观设置将在重启后生效 ✅")
 
     def _rebuild(self):
         for tab_name in ["运  行","自选股","策  略","通  知","设  置"]:
